@@ -59,7 +59,6 @@ bool DCmotor::set_dir(bool direction){
     else{
         digitalWrite(dir1_pin, HIGH);
         digitalWrite(dir2_pin, LOW);
-        //Serial.println("backward");
         return BACKWARD;
     }
 }

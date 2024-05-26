@@ -3,15 +3,15 @@
 
 #include <Arduino.h>
 #include <DCmotor.h>
-#include <DCmotor.cpp>
 
 class Drive{
 public: 
     Drive(DCmotor *fl, DCmotor *fr, DCmotor *bl, DCmotor *br);
     void move_velocity(float steering, float velocity);
     void feedback_callback();
-    void move_position(); // this calls position_command for all the drive motors
-    void pause_until_position_done();// calls all the pause functions for each motor
+    void move_position(float pos); // this calls position_command for all the drive motors
+    bool pause_all_until_position_done();// calls all the pause functions for each motor
+    void turn_90_deg(bool dir);
 private:
     DCmotor *front_left;
     DCmotor *front_right;

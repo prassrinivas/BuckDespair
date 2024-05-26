@@ -1,21 +1,24 @@
 #include <Arduino.h>
 #include <DCmotor.h>
-#include <DCmotor.cpp>
 #include <AccelStepper.h>
+#include <Drive.h>
 
-#define pwm 8
+#define CHICKEN true
+#define BEEF false
+
+#define pwm 9
 #define in1 24
 #define in2 25
 #define encoderA 3
 
 #define pwm_2 10
-#define in1_2 22
-#define in2_2 23
+#define in1_2 34
+#define in2_2 35
 #define encoderA_2 2
 
-#define pwm_3 13
-#define in1_3 34
-#define in2_3 35
+#define pwm_3 8
+#define in1_3 22
+#define in2_3 23
 #define encoderA_3 19
 
 #define pwm_4 7
@@ -23,12 +26,32 @@
 #define in2_4 37
 #define encoderA_4 18
 
+#define IRpin_middle 38 
+#define IRpin_middle_right 39 
+#define IRpin_middle_left 40 
+#define IRpin_right 41
+#define IRpin_left 42 
+
 float current_rpm = 0;
 int i = 0;
+bool type = CHICKEN;
+int drop_off = 4;
+int drop_off_count = 0; 
+
+const int trigPin = 43;
+const int echoPin = 44;
+
+float duration, distance;
+
 DCmotor mot1(pwm, in1, in2, encoderA);
 DCmotor mot2(pwm_2, in1_2, in2_2, encoderA_2);
 DCmotor mot3(pwm_3, in1_3, in2_3, encoderA_3);
 DCmotor mot4(pwm_4,in1_4,in2_4,encoderA_4);
+DCmotor* mot1_pointer = &mot1;
+DCmotor* mot2_pointer = &mot2;
+DCmotor* mot3_pointer = &mot3;
+DCmotor* mot4_pointer = &mot4;
+Drive AWD(mot4_pointer, mot3_pointer, mot1_pointer, mot2_pointer);
 //AccelStepper stepper1(1, 22, 23); // (Type of driver: with 2 pins, STEP, DIR)
 //AccelStepper stepper2(AccelStepper::DRIVER,24,25);
 bool LED_STATE = LOW;
@@ -44,12 +67,41 @@ static void enable_timer_interrupt(){
   sei(); 
 }
 
+float measure_ultrasonic() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  duration = pulseIn(echoPin, HIGH);
+  distance = (duration*.0343)/2;
+  Serial.print("Distance: ");
+  Serial.println(distance);
+  return distance;
+}
+
+void pick_up_sequence() {
+  //open claw
+  //extend claw
+  //close claw
+  //retract claw
+  //lower plate
+}
+
+void drop_off_sequence() {
+  //raise plate
+  //extend claw
+  //open claw
+  //retract claw
+  //close claw
+}
+
 void mot1_enc(){
   mot1.enc_tick();
 }
 
 void mot2_enc(){
-  //Serial.println("encoder");
   mot2.enc_tick();
 }
 
@@ -63,11 +115,19 @@ void mot4_enc(){
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
+
+  pinMode(IRpin_middle,INPUT); 
+  pinMode(IRpin_middle_right,INPUT); 
+  pinMode(IRpin_middle_left,INPUT); 
+  pinMode(IRpin_right,INPUT); 
+  pinMode(IRpin_left,INPUT); 
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
   attachInterrupt(digitalPinToInterrupt(encoderA), mot1_enc, RISING);
   attachInterrupt(digitalPinToInterrupt(encoderA_2), mot2_enc, RISING);
   attachInterrupt(digitalPinToInterrupt(encoderA_3), mot3_enc, RISING);
   attachInterrupt(digitalPinToInterrupt(encoderA_4), mot4_enc, RISING);
-
 
   //stepper1.setMaxSpeed(1200);
                      //Enable back the interrupts
@@ -75,24 +135,8 @@ void setup() {
   Serial.begin(9600);
   Serial.println("setup");
   enable_timer_interrupt();
-  //mot1.set_rpm(80);
-  //mot1.set_dir(BACKWARD);
-  //mot2.set_rpm(80);
+
   digitalWrite(LED_BUILTIN, LED_STATE);
-  //stepper1.setAcceleration(1500);
-  //stepper1.setCurrentPosition(0);
-  //stepper2.setMaxSpeed(1000);
-  //stepper2.setAcceleration(2000);
-  //stepper2.setCurrentPosition(0);
-
-  // mot1.position_command(-1);
-  // mot2.position_command(1);
-  // mot3.position_command(-1);
-  // mot4.position_command(1);
-  //mot2.pause_until_position_done();
-  
-
-  //Serial.println("done");
 
   Serial.println("done");
 }
@@ -106,40 +150,107 @@ void loop() {
 // stepper2.runToPosition();
 // Serial.println("reached 2");
  //  delay(1000);
-  mot1.position_command(1);
-  mot2.position_command(-1);
-  mot3.position_command(1);
-  mot4.position_command(-1);
 
-  // mot1.set_rpm(110);
-  // mot2.set_rpm(-110);
-  // mot3.set_rpm(110);
-  // mot4.set_rpm(-110);
-  // Serial.print("Motor 1 rpm: ");
-  // Serial.println(mot1.calc_rpm());
-  // Serial.print("Motor 2 rpm: ");
-  // Serial.println(mot2.calc_rpm());
-  // Serial.print("Motor 3 rpm: ");
-  // Serial.println(mot3.calc_rpm());
-  // Serial.print("Motor 4 rpm: ");
-  // Serial.println(mot4.calc_rpm());
-  // delay(500);
-  
-  mot1.pause_until_position_done();
-  mot2.pause_until_position_done();
-  mot3.pause_until_position_done();
-  mot4.pause_until_position_done();
+  // AWD.move_position(0.5);
+
+  // AWD.pause_all_until_position_done();
+
+  // AWD.move_position(-0.5);
+
+  // AWD.pause_all_until_position_done();
+
+  // AWD.turn_90_deg(true);
+  // AWD.turn_90_deg(false);
+
+  // if (i%1000 == 0) {
+  //   Serial.print("Motor 1 rpm: ");
+  //   Serial.println(mot1.calc_rpm());
+  //   Serial.print("Motor 2 rpm: ");
+  //   Serial.println(mot2.calc_rpm());
+  //   Serial.print("Motor 3 rpm: ");
+  //   Serial.println(mot3.calc_rpm());
+  //   Serial.print("Motor 4 rpm: ");
+  //   Serial.println(mot4.calc_rpm());
+  // }
+
+  // i = i+1;
+//////CODE START/////
 
 
-  mot1.position_command(-1);
-  mot2.position_command(1);
-  mot3.position_command(-1);
-  mot4.position_command(1);
-
-  mot1.pause_until_position_done();
-  mot2.pause_until_position_done();
-  mot3.pause_until_position_done();
-  mot4.pause_until_position_done();
+  int IRread_middle = digitalRead(IRpin_middle);
+  int IRread_middle_right = digitalRead(IRpin_middle_right); 
+  int IRread_middle_left = digitalRead(IRpin_middle_left); 
+  int IRread_right = digitalRead(IRpin_right); 
+  int IRread_left = digitalRead(IRpin_left); 
+  if (IRread_middle == 1) {
+    if (IRread_right == 0 && IRread_left == 0) {
+      Serial.println("Not at intersection!");
+      if (IRread_middle_left == 0 && IRread_middle_right == 0) { //go straight
+        Serial.println("Centered, moving forward!");
+        AWD.move_position(0.25);
+        AWD.pause_all_until_position_done();
+      }
+      else if (IRread_middle_left == 1 && IRread_middle_right == 0) { //adjust left
+        Serial.println("Too far right, adjusting left");
+        //Adjust left function
+      }
+      else if (IRread_middle_left == 0 && IRread_middle_right == 1) { //adjust right
+        Serial.println("Too far left, adjusting right!");
+        //Adjust right function
+      }
+    }
+    else if (IRread_right == 1 && IRread_left == 1) { //4-way intersection
+      Serial.println("At a 4 way intersection!");
+      if (type == CHICKEN) {
+        Serial.println("Picking up Chicken!");
+        //Rotate Left Function
+        float dis = measure_ultrasonic();
+        float rot_to_wall = dis/7.4613;
+        AWD.move_position(rot_to_wall);
+        AWD.pause_all_until_position_done();
+        pick_up_sequence();
+        AWD.move_position(-rot_to_wall);
+        AWD.pause_all_until_position_done();
+        //rotate right function
+      }
+      else {
+        Serial.println("Picking up Beef!");
+        //Rotate Right Function
+        float dis = measure_ultrasonic();
+        float rot_to_wall = dis/7.4613;
+        AWD.move_position(rot_to_wall);
+        AWD.pause_all_until_position_done();
+        pick_up_sequence();
+        AWD.move_position(-rot_to_wall);
+        AWD.pause_all_until_position_done();
+        //rotate left function
+      }
+    }
+    else if (IRread_right == 0 && IRread_left == 1) { //left intersection
+      Serial.println("At Left Turn!");
+      //Turn left code
+    }
+    else if (IRread_right == 1 && IRread_left == 0) { //right intersection
+      Serial.println("At Right Turn!");
+      drop_off_count++;
+      if (drop_off_count == drop_off) {
+        //Rotate Right Function
+        float dis = measure_ultrasonic();
+        float rot_to_wall = dis/7.4613;
+        AWD.move_position(rot_to_wall);
+        AWD.pause_all_until_position_done();
+        drop_off_sequence();
+        AWD.move_position(-rot_to_wall);
+        AWD.pause_all_until_position_done();
+        //rotate left function
+      }
+      else {
+        while (IRread_right == 1 || IRread_left == 1 || IRread_middle_left == 1 || IRread_middle_right == 1) {
+          AWD.move_velocity(0,10);
+        }
+      }
+    }
+  }
 }
   
 ISR(TIMER1_COMPA_vect){

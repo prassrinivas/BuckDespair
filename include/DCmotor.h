@@ -4,7 +4,7 @@
 
 #define TICKS_PER_REVOLUTION 900.00//540.00
 #define MS_PER_MIN 60000.00
-#define MAX_SPEED 110
+#define MAX_SPEED 70
 #define FORWARD 1
 #define BACKWARD 0
 #define I_GAIN 2
