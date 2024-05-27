@@ -31,7 +31,8 @@ float DCmotor::calc_rpm(){
   encticks_last = encticks;
   time_last = millis();
   if (current_direction==BACKWARD){
-    out = -out;
+    //Serial.println("negative");
+    //out = -out;
   }
   return out;
 }
@@ -46,6 +47,7 @@ bool DCmotor::send_speed(int pwm){
     else{
         pwm_output = pwm;
         analogWrite(pwm_pin, pwm);
+        //Serial.println(pwm);
         return true;
     }
 }
@@ -66,8 +68,15 @@ bool DCmotor::set_dir(bool direction){
 bool DCmotor::set_rpm(float rpm){
     mode = VEL_MODE;
     rpm_setpoint = rpm;
+    bool change_dir = false;
+    if((rpm>=0 && current_direction == BACKWARD) || (rpm<=0 && current_direction == FORWARD)){
+        change_dir = true;
+    }
+
     set_dir(rpm >=0);
     int pwm_input = map(((rpm)>0?(rpm):-(rpm)), 0, MAX_SPEED, 0 , 255);
+    if(change_dir) pwm_input += 30;
+    Serial.println(pwm_input);
     return(send_speed(pwm_input));
 }
 
@@ -92,7 +101,7 @@ bool DCmotor::pause_until_position_done(){
 
 
 float DCmotor::feedback_callback(){
-    //Serial.println("start interrupt");
+    //Serial.println(current_direction);
     float cur_rpm = calc_rpm();
     current_position = encticks / TICKS_PER_REVOLUTION;
         if(mode == POS_MODE){
@@ -112,8 +121,11 @@ float DCmotor::feedback_callback(){
         else if (mode == VEL_MODE){
             //Serial.println("velocity feedback");
             float control_effort_change = I_GAIN * (rpm_setpoint - cur_rpm);
-            pwm_output += (current_direction?(control_effort_change):-(control_effort_change));
-            send_speed(CLAMP(pwm_output,0,255));
+            integral_term += (current_direction==FORWARD?(control_effort_change):-(control_effort_change));
+            pwm_output = 2*(rpm_setpoint - cur_rpm) + integral_term;
+            
+            send_speed(pwm_output);
+            //Serial.println(pwm_output);
         }   
         //Serial.println("end interrupt");
 
