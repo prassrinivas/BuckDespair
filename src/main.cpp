@@ -34,8 +34,12 @@
 
 float current_rpm = 0;
 int i = 0;
+
+/////CHANGE THESE/////
 bool type = CHICKEN;
 int drop_off = 4;
+//////////////////////
+
 int drop_off_count = 0; 
 
 const int trigPin = 43;
@@ -213,11 +217,15 @@ void loop() {
       Serial.println("Fairly diagonal, adjusting right");
       mot1.position_command(0.1);
       mot4.position_command(0.1);
+      mot1.pause_until_position_done();
+      mot4.pause_until_position_done();
     }
     else if ((IRread_left == 1 && IRread_middle_left == 0)){
       Serial.println("Fairly diagonal, adjusting left");
       mot2.position_command(0.1);
       mot3.position_command(0.1);
+      mot2.pause_until_position_done();
+      mot3.pause_until_position_done();
     }
 
     else if (IRread_right == 1 && IRread_left == 1) { //4-way intersection
@@ -227,14 +235,19 @@ void loop() {
         //Rotate Left Function
         AWD.turn_90_deg(false);
         float dis = measure_ultrasonic();
+        Serial.println(dis);
         float rot_to_wall = 0.75*dis/22.9399;
         AWD.move_position(rot_to_wall);
         AWD.pause_all_until_position_done();
+        Serial.println("moved to wall");
         pick_up_sequence();
+        Serial.println("picked up disk");
         AWD.move_position(-rot_to_wall);
         AWD.pause_all_until_position_done();
+        Serial.println("Moved away from wall");
         //rotate right function
         AWD.turn_90_deg(true);
+        Serial.println("turned back to track");
         drop_off_count = 0;
       }
       else {
