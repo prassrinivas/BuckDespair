@@ -76,8 +76,9 @@ bool DCmotor::set_rpm(float rpm){
     set_dir(rpm >=0);
     int pwm_input = map(((rpm)>0?(rpm):-(rpm)), 0, MAX_SPEED, 0 , 255);
     if(change_dir) pwm_input += 30;
-    Serial.println(pwm_input);
-    return(send_speed(pwm_input));
+    //Serial.println(pwm_input);
+    //return(send_speed(pwm_input));
+    return true;
 }
 
 void DCmotor::position_command(float position){
@@ -109,7 +110,7 @@ float DCmotor::feedback_callback(){
             current_direction = (pos_error>=0? (FORWARD): (BACKWARD));
             set_dir(current_direction);
             send_speed(CLAMP(POS_K_GAIN * abs(pos_error),45, 255));
-            Serial.println(pos_error);
+            //Serial.println(pos_error);
             if(abs(pos_error) < 0.02){
                 //Serial.println("done running");
 

@@ -9,8 +9,8 @@ void Drive::move_velocity(float steering, float velocity){
     front_left->set_rpm(left_velocity);
     back_left ->set_rpm(left_velocity);
 
-    front_right->set_rpm(right_velocity);
-    back_right->set_rpm(right_velocity);
+    front_right->set_rpm(-right_velocity);
+    back_right->set_rpm(-right_velocity);
 }
 
 void Drive::move_position(float pos){
@@ -30,22 +30,26 @@ bool Drive::pause_all_until_position_done() {
 
 void Drive::turn_90_deg(bool dir) {
     if (dir == true) { //true = right
-        back_left->set_rpm(10);
-        back_right->set_rpm(10);
-        front_right->set_rpm(10);
-        front_left->set_rpm(10);
-        delay(1000);
+        move_position(0.15);
+        pause_all_until_position_done();
+        back_left->set_rpm(50);
+        back_right->set_rpm(50);
+        front_right->set_rpm(50);
+        front_left->set_rpm(50);
+        delay(1400);
         back_left->set_rpm(0);
         back_right->set_rpm(0);
         front_right->set_rpm(0);
         front_left->set_rpm(0);
     }
     else {
-        back_left->set_rpm(10);
-        back_right->set_rpm(10);
-        front_right->set_rpm(10);
-        front_left->set_rpm(10);
-        delay(1000);
+        move_position(0.15);
+        pause_all_until_position_done();
+        back_left->set_rpm(-50);
+        back_right->set_rpm(-50);
+        front_right->set_rpm(-50);
+        front_left->set_rpm(-50);
+        delay(1400);
         back_left->set_rpm(0);
         back_right->set_rpm(0);
         front_right->set_rpm(0);
