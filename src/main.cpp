@@ -210,10 +210,12 @@ void loop() {
       }
     }
     else if ((IRread_right == 1 && IRread_middle_right == 0)){
+      Serial.println("Fairly diagonal, adjusting right");
       mot1.position_command(0.1);
       mot4.position_command(0.1);
     }
     else if ((IRread_left == 1 && IRread_middle_left == 0)){
+      Serial.println("Fairly diagonal, adjusting left");
       mot2.position_command(0.1);
       mot3.position_command(0.1);
     }
