@@ -69,13 +69,13 @@ bool DCmotor::set_rpm(float rpm){
     mode = VEL_MODE;
     rpm_setpoint = rpm;
     bool change_dir = false;
-    if((rpm>=0 && current_direction == BACKWARD) || (rpm<=0 && current_direction == FORWARD)){
+    if((rpm>0 && current_direction == BACKWARD) || (rpm<0 && current_direction == FORWARD)){
         change_dir = true;
     }
 
     set_dir(rpm >=0);
     int pwm_input = map(((rpm)>0?(rpm):-(rpm)), 0, MAX_SPEED, 0 , 255);
-    if(change_dir) pwm_input += 30;
+    //if(change_dir) pwm_input += 30;
     //Serial.println(pwm_input);
     //return(send_speed(pwm_input));
     return true;
@@ -111,9 +111,9 @@ float DCmotor::feedback_callback(){
             set_dir(current_direction);
             send_speed(CLAMP(POS_K_GAIN * abs(pos_error),45, 255));
             //Serial.println(pos_error);
-            if(abs(pos_error) < 0.02){
+            if(abs(pos_error) < 0.015){
                 //Serial.println("done running");
-
+                //mode = IDLE_MODE;
                 position_command_running = false;
 
             }
@@ -125,19 +125,13 @@ float DCmotor::feedback_callback(){
             integral_term += (current_direction==FORWARD?(control_effort_change):-(control_effort_change));
             pwm_output = 2*(rpm_setpoint - cur_rpm) + integral_term;
             
-            send_speed(pwm_output);
+            send_speed(CLAMP(pwm_output,0, 255));
             //Serial.println(pwm_output);
+        }
+        else if(mode == IDLE_MODE){
+            //NOTHIN
         }   
         //Serial.println("end interrupt");
 
     return cur_rpm;
-}
-
-
-static void disable_timer_interrupt(){
-    
-  cli();
-  TCCR1B &= B11111011;
-  TIMSK1 &= B11111101;        
-  sei();
 }

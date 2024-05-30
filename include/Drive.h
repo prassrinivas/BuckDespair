@@ -12,6 +12,8 @@ public:
     void move_position(float pos); // this calls position_command for all the drive motors
     bool pause_all_until_position_done();// calls all the pause functions for each motor
     void turn_90_deg(bool dir);
+    void steer_position(float pos);
+
 private:
     DCmotor *front_left;
     DCmotor *front_right;

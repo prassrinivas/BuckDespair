@@ -33,7 +33,7 @@
 #define IRpin_left 48 
 
 #define CAM_ENABLE 40
-#define SCREW_GRABBER_ENABLE 41 
+#define SCREW_GRABBER_ENABLE 41 //turns the grabber and lead screw steppers on/off (digital)
 
 #define OPEN true
 #define CLOSED false
@@ -46,10 +46,12 @@ int i = 0;
 
 /////CHANGE THESE/////
 bool type = CHICKEN;
-int drop_off = 4;
+int drop_off = 2;
 //////////////////////
 
 int drop_off_count = 0; 
+int pick_up_count = 0;
+int stack = 1;
 
 const int trigPin = 43;
 const int echoPin = 44;
@@ -66,8 +68,8 @@ DCmotor* mot3_pointer = &mot3;
 DCmotor* mot4_pointer = &mot4;
 Drive AWD(mot4_pointer, mot3_pointer, mot1_pointer, mot2_pointer);
 AccelStepper cam(1, 4, 30); // (Type of driver: with 2 pins, STEP, DIR)
-AccelStepper grabber(1, 5, 31); // (Type of driver: with 2 pins, STEP, DIR)
-AccelStepper screw(1, 6, 32); // (Type of driver: with 2 pins, STEP, DIR)
+AccelStepper grabber(1, 6, 31); // (Type of driver: with 2 pins, STEP, DIR)
+AccelStepper screw(1, 5, 28); // (Type of driver: with 2 pins, STEP, DIR)
 
 //AccelStepper stepper2(AccelStepper::DRIVER,24,25);
 bool LED_STATE = LOW;
@@ -82,6 +84,16 @@ static void enable_timer_interrupt(){
   OCR1A = TIMER_INTERVAL;             //Finally we set compare register A to this value  
   sei(); 
 }
+
+
+void disable_timer_interrupt(){
+    
+  cli();
+  TCCR1B &= B11111011;
+  TIMSK1 &= B11111101;        
+  sei();
+}
+
 
 float measure_ultrasonic() {
   digitalWrite(trigPin, LOW);
@@ -98,27 +110,32 @@ float measure_ultrasonic() {
 }
 
 void actuate_cam(int position){
-  digitalWrite(CAM_ENABLE,HIGH);
+  //digitalWrite(CAM_ENABLE,HIGH);
   switch(position){
-    case 1: 
+    case 0: 
       cam.moveTo(0);
       break;
+    case 1: 
+      cam.moveTo(250);
+      break;
     case 2: 
-      cam.moveTo(200);
+      cam.moveTo(550);
       break;
     case 3: 
-      cam.moveTo(400);
+      cam.moveTo(800);
+      break;
+    default:
       break;
   }
   cam.runToPosition();
-  digitalWrite(CAM_ENABLE, LOW);
+  //digitalWrite(CAM_ENABLE, LOW);
 }
 
 void actuate_grabber(bool position){
   digitalWrite(SCREW_GRABBER_ENABLE, HIGH);
   switch(position){
     case OPEN:
-      grabber.moveTo(400);
+      grabber.moveTo(-300);
       break;
     case CLOSED:
       grabber.moveTo(0);
@@ -134,31 +151,55 @@ void actuate_screw(bool position){
 
   switch(position){
       case OUT:
-        screw.moveTo(1600);
+        screw.moveTo(35000);
+        Serial.print("out");
 
         break;
       case IN:
         screw.moveTo(0);
+        Serial.print("in");
         break;
   }
   screw.runToPosition();
   digitalWrite(SCREW_GRABBER_ENABLE, LOW);
 
 }
-void pick_up_sequence() {
+void pick_up_sequence(int stack) {
+  //drop the cam
+  actuate_grabber(OPEN);
+  actuate_cam(stack);
   //open claw
   //extend claw
+  actuate_screw(OUT);
   //close claw
+  actuate_grabber(CLOSED);
   //retract claw
-  //lower plate
+  actuate_screw(IN);
+
+  AWD.move_position(-0.2);
+  AWD.pause_all_until_position_done();
+  actuate_grabber(OPEN);
+  actuate_cam(0);
+  actuate_grabber(CLOSED);
+
+  AWD.move_position(0.2);
+  AWD.pause_all_until_position_done();
 }
 
 void drop_off_sequence() {
   //raise plate
+  actuate_grabber(OPEN);
+
+  actuate_cam(0);
+  actuate_grabber(CLOSED);
   //extend claw
+  actuate_screw(OUT);
   //open claw
+  actuate_grabber(OPEN);
   //retract claw
+  actuate_screw(IN);
   //close claw
+  actuate_grabber(CLOSED);
 }
 
 void mot1_enc(){
@@ -203,15 +244,15 @@ void setup() {
 
   //STEPPER SETUP
   pinMode(CAM_ENABLE,OUTPUT);
-  digitalWrite(CAM_ENABLE, LOW);
-  cam.setMaxSpeed(1000);
-  cam.setAcceleration(750);
+  digitalWrite(CAM_ENABLE, HIGH);
+  cam.setMaxSpeed(500);
+  cam.setAcceleration(250);
   cam.setCurrentPosition(0);
   pinMode(SCREW_GRABBER_ENABLE, OUTPUT);
   digitalWrite(SCREW_GRABBER_ENABLE, LOW);
 
-  screw.setMaxSpeed(1000);
-  screw.setAcceleration(250);
+  screw.setMaxSpeed(2000);
+  screw.setAcceleration(1000);
   screw.setCurrentPosition(0);
 
 
@@ -220,181 +261,156 @@ void setup() {
   grabber.setCurrentPosition(0);
 
 
-  delay(5000);
+  delay(3000);
   Serial.println("done");
 }
 
 void loop() {
-// stepper2.moveTo(-5*100);
-// stepper2.runToPosition();
-// Serial.println("reached");
-// delay(1000);
-// stepper2.moveTo(0);
-// stepper2.runToPosition();
-// Serial.println("reached 2");
- //  delay(1000);
-
-  // AWD.move_position(0.5);
-
-  // AWD.pause_all_until_position_done();
-
-  // AWD.move_position(-0.5);
-
-  // AWD.pause_all_until_position_done();
-
-  // AWD.turn_90_deg(true);
-  // AWD.turn_90_deg(false);
-
-  // if (i%1000 == 0) {
-  //   Serial.print("Motor 1 rpm: ");
-  //   Serial.println(mot1.calc_rpm());
-  //   Serial.print("Motor 2 rpm: ");
-  //   Serial.println(mot2.calc_rpm());
-  //   Serial.print("Motor 3 rpm: ");
-  //   Serial.println(mot3.calc_rpm());
-  //   Serial.print("Motor 4 rpm: ");
-  //   Serial.println(mot4.calc_rpm());
-  // }
-
-  // i = i+1;
 //////CODE START/////
-  //Serial.println("start of loop");
+start:
+  int IRread_middle_right = digitalRead(IRpin_middle_right); 
+  int IRread_middle_left = digitalRead(IRpin_middle_left); 
+  int IRread_right = digitalRead(IRpin_right); 
+  int IRread_left = digitalRead(IRpin_left); 
+  if (IRread_right == 0 && IRread_left == 0) {
+    Serial.println("Not at intersection!");
+    if (IRread_middle_left == 0 && IRread_middle_right == 0) { //go straight
+      Serial.println("Centered, moving forward!");
+      AWD.move_velocity(0,40);
+      delay(50);
+      AWD.move_velocity(0,0);
+    }
+    else if (IRread_middle_left == 1 && IRread_middle_right == 0) { //adjust left
+      Serial.println("Too far right, adjusting left");
+      //Adjust left function
+      // AWD.steer_position(-0.05);
+      // AWD.pause_all_until_position_done();
+      AWD.move_velocity(20,0);
+      delay(100);
+      AWD.move_velocity(0,0);
+    }
+    else if (IRread_middle_left == 0 && IRread_middle_right == 1) { //adjust right
+      Serial.println("Too far left, adjusting right!");
+      //Adjust right function
+      // AWD.steer_position(0.05);
+      // AWD.pause_all_until_position_done();
+      AWD.move_velocity(-20,0);
+      delay(100);
+      AWD.move_velocity(0,0);
+    }
+  }
+  else if (IRread_right == 1 && IRread_left == 1) { //4-way intersection
+    fourway:
+    //delay(3000);
+    if(pick_up_count == 2){
+      AWD.move_position(0.1);
+      AWD.pause_all_until_position_done();
+      Serial.println("GOIN BACK TO THE START");
+      goto start;
+    }
+    Serial.println("At a 4 way intersection!");
+    pick_up_count++;
+    if (type == CHICKEN) {
+      Serial.println("Picking up Chicken!");
+      //Rotate Left Function
+      AWD.turn_90_deg(false);
+      float dis = measure_ultrasonic();
+      //Serial.println(dis);
+      float rot_to_wall = 0.75*dis/22.9399;
+      float rot_from_wall = -1.15*dis/22.9399;
+      AWD.move_position(rot_to_wall);
+      AWD.pause_all_until_position_done();
+      //Serial.println("moved to wall");
+      stack++;
+      pick_up_sequence(stack);
+      //Serial.println("picked up disk");
+      AWD.move_position(rot_from_wall);
+      AWD.pause_all_until_position_done();
+      //Serial.println("Moved away from wall");
+      //rotate right function
+      AWD.turn_90_deg(true);
+      AWD.move_position(0.05);
+      AWD.pause_all_until_position_done();
+      //Serial.println("turned back to track");
+    }
+    else {
+      Serial.println("Picking up Beef!");
+      //Rotate Right Function
+      AWD.turn_90_deg(true);
+      float dis = measure_ultrasonic();
+      float rot_to_wall = 0.75*dis/22.9399;
+      float rot_from_wall = -1.15*dis/22.9399;
+      AWD.move_position(rot_to_wall);
+      AWD.pause_all_until_position_done();
+      stack++;
+      pick_up_sequence(stack);
+      AWD.move_position(rot_from_wall);
+      AWD.pause_all_until_position_done();
+      //rotate left function
+      AWD.turn_90_deg(false);
+      AWD.move_position(0.05);
+      AWD.pause_all_until_position_done();
 
-  // int IRread_middle = digitalRead(IRpin_middle);
-  // int IRread_middle_right = digitalRead(IRpin_middle_right); 
-  // int IRread_middle_left = digitalRead(IRpin_middle_left); 
-  // int IRread_right = digitalRead(IRpin_right); 
-  // int IRread_left = digitalRead(IRpin_left); 
-  // //if (IRread_middle == 1) {FUCKTHEMIDDLEONEFUCKTHEMIDDLEONEFUCKTHEMIDDLEONEFUCKTHEMIDDLEONEFUCKTHEMIDDLEONEFUCKTHEMIDDLEONEFUCKTHEMIDDLEONE
-  //   //Serial.println("in first if");
-  //   if (IRread_right == 0 && IRread_left == 0) {
-  //     Serial.println("Not at intersection!");
-  //     if (IRread_middle_left == 0 && IRread_middle_right == 0) { //go straight
-  //       Serial.println("Centered, moving forward!");
-  //       AWD.move_velocity(0,40);
-  //       delay(50);
-  //       AWD.move_velocity(0,0);
-  //     }
-  //     else if (IRread_middle_left == 1 && IRread_middle_right == 0) { //adjust left
-  //       Serial.println("Too far right, adjusting left");
-  //       //Adjust left function
-  //       AWD.move_velocity(10,0);
-  //       delay(100);
-  //       AWD.move_velocity(0,0);
-  //     }
-  //     else if (IRread_middle_left == 0 && IRread_middle_right == 1) { //adjust right
-  //       Serial.println("Too far left, adjusting right!");
-  //       //Adjust right function
-  //       AWD.move_velocity(-10,0);
-  //       delay(100);
-  //       AWD.move_velocity(0,0);
-  //     }
-  //   }
-  //   else if ((IRread_right == 1 && IRread_middle_right == 0)){
-  //     Serial.println("Fairly diagonal, adjusting right");
-  //     mot1.position_command(0.1);
-  //     mot4.position_command(0.1);
-  //     mot1.pause_until_position_done();
-  //     mot4.pause_until_position_done();
-  //   }
-  //   else if ((IRread_left == 1 && IRread_middle_left == 0)){
-  //     Serial.println("Fairly diagonal, adjusting left");
-  //     mot2.position_command(0.1);
-  //     mot3.position_command(0.1);
-  //     mot2.pause_until_position_done();
-  //     mot3.pause_until_position_done();
-  //   }
+    }
+  }
+  else if (IRread_right == 0 && IRread_left == 1) { //left intersection
+    Serial.println("At Left Turn!");
+    //delay(1000);
+    AWD.move_position(0.03);
+    AWD.pause_all_until_position_done();
+    IRread_right = digitalRead(IRpin_right); 
+    if (IRread_right == 1) {
+      Serial.println("goto fourway");
+      goto fourway;
+    }
+    else {
+      AWD.move_position(-0.03);
+      AWD.pause_all_until_position_done();
 
-  //   else if (IRread_right == 1 && IRread_left == 1) { //4-way intersection
-  //     Serial.println("At a 4 way intersection!");
-  //     if (type == CHICKEN) {
-  //       Serial.println("Picking up Chicken!");
-  //       //Rotate Left Function
-  //       AWD.turn_90_deg(false);
-  //       float dis = measure_ultrasonic();
-  //       Serial.println(dis);
-  //       float rot_to_wall = 0.75*dis/22.9399;
-  //       AWD.move_position(rot_to_wall);
-  //       AWD.pause_all_until_position_done();
-  //       Serial.println("moved to wall");
-  //       pick_up_sequence();
-  //       Serial.println("picked up disk");
-  //       AWD.move_position(-rot_to_wall);
-  //       AWD.pause_all_until_position_done();
-  //       Serial.println("Moved away from wall");
-  //       //rotate right function
-  //       AWD.turn_90_deg(true);
-  //       Serial.println("turned back to track");
-  //       drop_off_count = 0;
-  //     }
-  //     else {
-  //       Serial.println("Picking up Beef!");
-  //       //Rotate Right Function
-  //       AWD.turn_90_deg(true);
-  //       float dis = measure_ultrasonic();
-  //       float rot_to_wall = 0.75*dis/22.9399;
-  //       AWD.move_position(rot_to_wall);
-  //       AWD.pause_all_until_position_done();
-  //       pick_up_sequence();
-  //       AWD.move_position(-rot_to_wall);
-  //       AWD.pause_all_until_position_done();
-  //       //rotate left function
-  //       AWD.turn_90_deg(false);
-  //       drop_off_count = 0;
-  //     }
-  //   }
-  //   else if (IRread_right == 0 && IRread_left == 1) { //left intersection
-  //     Serial.println("At Left Turn!");
-  //     //Turn left code
-  //     AWD.turn_90_deg(false);
-  //   }
-  //   else if (IRread_right == 1 && IRread_left == 0) { //right intersection
-  //     Serial.println("At Right Turn!");
-  //     drop_off_count++;
-  //     if (drop_off_count == drop_off) {
-  //       //Rotate Right Function
-  //       AWD.turn_90_deg(true);
-  //       float dis = measure_ultrasonic();
-  //       float rot_to_wall = 0.75*dis/22.9399;
-  //       AWD.move_position(rot_to_wall);
-  //       AWD.pause_all_until_position_done();
-  //       drop_off_sequence();
-  //       AWD.move_position(-rot_to_wall);
-  //       AWD.pause_all_until_position_done();
-  //       AWD.turn_90_deg(false);
-  //       //rotate left function
-  //     }
-  //     else {
-  //       Serial.println("move until passed line");
-  //       AWD.move_velocity(0,10);
-  //       delay(500);
-  //       AWD.move_velocity(0,0);
-  //     }
-  //   }
-  // //}
-  // //else {
+    }
+    Serial.println("confirm left turn");
 
-  //   if (IRpin_middle_right == 1) {
-  //     //adjust left
-  //     Serial.println("middle sensor off, adjusting right");
-  //     AWD.move_velocity(-10,0);
-  //     delay(250);
-  //     AWD.move_velocity(0,0);
-  //   }
-  //   else if (IRpin_middle_left == 1) {
-  //     Serial.println("middle sensor off, adjusting left");
-  //     AWD.move_velocity(10,0);
-  //     delay(250);
-  //     AWD.move_velocity(0,0);
-  //   }
-  actuate_cam(1);
-  actuate_cam(2);
-  actuate_cam(3);
-  actuate_grabber(OPEN);
-  actuate_grabber(CLOSED);
-  actuate_screw(OUT);
-  actuate_screw(IN);
-
+    //Turn left code
+    AWD.turn_90_deg(false);
+  }
+  else if (IRread_right == 1 && IRread_left == 0) { //right intersection
+  Serial.println("At Right Turn!");
+  //delay(1000);
+    AWD.move_position(0.03);
+    AWD.pause_all_until_position_done();
+    IRread_left = digitalRead(IRpin_left); 
+    if (IRread_left == 1) {
+      Serial.println("goto fourway");
+      goto fourway;
+    }
+    else {
+      AWD.move_position(-0.03);
+      AWD.pause_all_until_position_done();
+    }
+    Serial.println("confirm right turn");
+    drop_off_count++;
+    if (drop_off_count == drop_off) {
+      //Rotate Right Function
+      AWD.turn_90_deg(true);
+      float dis = measure_ultrasonic();
+      float rot_to_wall = 0.7*dis/22.9399;
+      float rot_from_wall = -1.05*dis/22.9399;
+      AWD.move_position(rot_to_wall);
+      AWD.pause_all_until_position_done();
+      drop_off_sequence();
+      AWD.move_position(rot_from_wall);
+      AWD.pause_all_until_position_done();
+      AWD.turn_90_deg(false);
+      AWD.move_position(0.05);
+      AWD.pause_all_until_position_done();
+      //rotate left function
+    }
+    else {
+      Serial.println("move until passed line");
+      AWD.move_position(0.1);
+      AWD.pause_all_until_position_done();
+    }
+  }
 }
   
 ISR(TIMER1_COMPA_vect){
@@ -406,15 +422,4 @@ ISR(TIMER1_COMPA_vect){
   float rpm2 = mot2.feedback_callback();
   float rpm3 = mot3.feedback_callback();
   float rpm4 = mot4.feedback_callback();
-
-
-  
-  // Serial.print(rpm1);
-  // Serial.print(", ");
-  // Serial.print(rpm2);
-  // Serial.print(", ");
-  // Serial.print(rpm3);
-  // Serial.print(", ");
-  // Serial.print(rpm4);
-  // Serial.print("\n");
 }

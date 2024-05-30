@@ -9,10 +9,12 @@
 #define BACKWARD 0
 #define I_GAIN 0.5
 #define TIMER_INTERVAL 2500
-#define POS_K_GAIN 750
+#define POS_K_GAIN 4250
 
+#define IDLE_MODE 1
 #define VEL_MODE 2
 #define POS_MODE 3
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CLAMP(x, low, high) (MIN(MAX(x, low), high))
